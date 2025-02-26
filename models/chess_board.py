@@ -30,6 +30,7 @@ class ChessBoard:
         self.move_history: List[Tuple[Tuple[int, int], Tuple[int, int]]] = []
         self.game_over = False
         self.game_result = ""
+        self.rewards_given = False  # Flag to track if rewards have been given
         self.thinking = False
         self.last_pawn_double_move: Optional[Tuple[int, int]] = None  # Position of pawn that just moved two squares
         
@@ -496,33 +497,43 @@ class ChessBoard:
         self.thinking = False
     
     def reset_game(self, game_mode: int = None, ai_difficulty: int = None) -> None:
-        """Reset the game to the initial state."""
+        """Reset the game to its initial state."""
+        # Update game mode if provided
         if game_mode is not None:
             self.game_mode = game_mode
         
+        # Update AI difficulty if provided
         if ai_difficulty is not None:
             self.ai_difficulty = ai_difficulty
-            
-        # Close the old AI if it exists
-        if self.ai:
-            self.ai.close()
-            
-        # Create a new AI if needed
-        self.ai = ChessAI(difficulty=self.ai_difficulty) if self.game_mode == MODE_HUMAN_VS_AI else None
         
-        # Reset the board
-        self.board = [[None for _ in range(BOARD_SIZE)] for _ in range(BOARD_SIZE)]
+        # Recreate AI if needed
+        if self.game_mode == MODE_HUMAN_VS_AI:
+            if self.ai:
+                self.ai.close()
+            self.ai = ChessAI(difficulty=self.ai_difficulty)
+        elif self.ai:
+            self.ai.close()
+            self.ai = None
+        
+        # Reset board state
+        self.clear_board()
+        self.setup_pieces()
         self.selected_piece = None
         self.legal_moves = []
         self.turn = 'white'
         self.move_history = []
         self.game_over = False
         self.game_result = ""
+        self.rewards_given = False  # Reset rewards flag
         self.thinking = False
         self.last_pawn_double_move = None
         
-        # Set up the pieces
-        self.setup_pieces()
+        # Reset animation properties
+        self.animated_pieces = []
+        self.animating = False
+        self.pending_ai_move = False
+        self.ai_move_start_time = 0
+        self.ai_move_duration = 0
     
     def find_king(self, color: str) -> Optional[Tuple[int, int]]:
         """Find the position of the king of the specified color."""

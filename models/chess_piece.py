@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, Dict, Any
 
 from constants import (
     BOARD_SIZE, PAWN, KNIGHT, BISHOP, ROOK, QUEEN, KING
@@ -251,4 +251,196 @@ class ChessPiece:
                     # If we hit any piece (even our own), we can't be attacked from beyond it
                     break
         
-        return False 
+        return False
+
+# RPG Extensions for Chess Pieces
+class RPGChessPiece(ChessPiece):
+    """Extended chess piece with RPG attributes like rarity, level, and durability."""
+    
+    # Rarity levels
+    RARITY_COMMON = "Common"
+    RARITY_UNCOMMON = "Uncommon"
+    RARITY_RARE = "Rare"
+    RARITY_EPIC = "Epic"
+    RARITY_LEGENDARY = "Legendary"
+    
+    # Base durability values by piece type
+    BASE_DURABILITY = {
+        PAWN: 10,
+        KNIGHT: 20,
+        BISHOP: 20,
+        ROOK: 30,
+        QUEEN: 40,
+        KING: 50
+    }
+    
+    # Rarity multipliers for stats
+    RARITY_MULTIPLIERS = {
+        RARITY_COMMON: 1.0,
+        RARITY_UNCOMMON: 1.2,
+        RARITY_RARE: 1.5,
+        RARITY_EPIC: 2.0,
+        RARITY_LEGENDARY: 3.0
+    }
+    
+    def __init__(self, piece_type: str, color: str, position: Tuple[int, int], 
+                 rarity: str = RARITY_COMMON, level: int = 1, 
+                 special_abilities: List[str] = None, equipment: Dict[str, Any] = None):
+        """
+        Initialize an RPG chess piece with extended attributes.
+        
+        Args:
+            piece_type: Type of chess piece (pawn, knight, etc.)
+            color: Color of the piece (white or black)
+            position: (row, col) position on the board
+            rarity: Rarity level affecting stats
+            level: Current level (1-10)
+            special_abilities: List of special ability IDs
+            equipment: Dictionary of equipped items
+        """
+        super().__init__(piece_type, color, position)
+        self.rarity = rarity
+        self.level = min(max(level, 1), 10)  # Ensure level is between 1 and 10
+        self.special_abilities = special_abilities or []
+        self.equipment = equipment or {}
+        
+        # Calculate max durability based on piece type, rarity, and level
+        base_durability = self.BASE_DURABILITY.get(piece_type, 10)
+        rarity_multiplier = self.RARITY_MULTIPLIERS.get(rarity, 1.0)
+        level_bonus = (self.level - 1) * 2  # +2 durability per level
+        
+        self.max_durability = int(base_durability * rarity_multiplier) + level_bonus
+        self.current_durability = self.max_durability
+        
+        # Experience points
+        self.xp = 0
+        self.xp_to_next_level = self._calculate_xp_for_level(self.level + 1)
+        
+        # Number of ability slots based on rarity
+        self.ability_slots = self._calculate_ability_slots()
+        
+        # Number of equipment slots based on rarity
+        self.equipment_slots = self._calculate_equipment_slots()
+    
+    def _calculate_ability_slots(self) -> int:
+        """Calculate number of ability slots based on rarity."""
+        if self.rarity == self.RARITY_COMMON:
+            return 0
+        elif self.rarity == self.RARITY_UNCOMMON:
+            return 1
+        elif self.rarity == self.RARITY_RARE:
+            return 2
+        else:  # Epic or Legendary
+            return 3
+    
+    def _calculate_equipment_slots(self) -> int:
+        """Calculate number of equipment slots based on rarity."""
+        if self.rarity == self.RARITY_COMMON:
+            return 1
+        elif self.rarity == self.RARITY_UNCOMMON:
+            return 1
+        elif self.rarity == self.RARITY_RARE:
+            return 2
+        else:  # Epic or Legendary
+            return 3
+    
+    def _calculate_xp_for_level(self, level: int) -> int:
+        """Calculate XP required to reach a specific level."""
+        if level <= 1:
+            return 0
+        # Exponential XP curve
+        return int(100 * (level - 1) ** 1.5)
+    
+    def add_xp(self, amount: int) -> bool:
+        """
+        Add XP to the piece and level up if necessary.
+        
+        Returns:
+            bool: True if the piece leveled up, False otherwise
+        """
+        self.xp += amount
+        if self.level < 10 and self.xp >= self.xp_to_next_level:
+            self.level_up()
+            return True
+        return False
+    
+    def level_up(self) -> None:
+        """Level up the piece, increasing its stats."""
+        if self.level >= 10:
+            return
+            
+        self.level += 1
+        
+        # Increase durability
+        old_max = self.max_durability
+        self.max_durability += 2
+        self.current_durability += 2
+        
+        # Unlock ability slots at levels 3, 6, and 9
+        if self.level in [3, 6, 9] and len(self.special_abilities) < self.ability_slots:
+            # Potentially unlock a new ability slot if rarity allows
+            new_slots = self._calculate_ability_slots()
+            if new_slots > len(self.special_abilities):
+                # New slot unlocked, but no ability assigned yet
+                pass
+        
+        # Calculate XP for next level
+        if self.level < 10:
+            self.xp_to_next_level = self._calculate_xp_for_level(self.level + 1)
+    
+    def take_damage(self, amount: int) -> bool:
+        """
+        Reduce durability by the given amount.
+        
+        Returns:
+            bool: True if the piece is still usable, False if it's "injured" (0 durability)
+        """
+        self.current_durability = max(0, self.current_durability - amount)
+        return self.current_durability > 0
+    
+    def repair(self, amount: int) -> None:
+        """Repair the piece by the given amount, up to its maximum durability."""
+        self.current_durability = min(self.max_durability, self.current_durability + amount)
+    
+    def get_effectiveness(self) -> float:
+        """Calculate the piece's effectiveness based on level and rarity."""
+        rarity_bonus = self.RARITY_MULTIPLIERS.get(self.rarity, 1.0)
+        level_bonus = 1.0 + (self.level - 1) * 0.05  # +5% per level
+        return rarity_bonus * level_bonus
+    
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert the piece to a dictionary for storage."""
+        return {
+            "piece_type": self.piece_type,
+            "color": self.color,
+            "rarity": self.rarity,
+            "level": self.level,
+            "xp": self.xp,
+            "xp_to_next_level": self.xp_to_next_level,
+            "max_durability": self.max_durability,
+            "current_durability": self.current_durability,
+            "special_abilities": self.special_abilities.copy(),
+            "equipment": self.equipment.copy(),
+            "ability_slots": self.ability_slots,
+            "equipment_slots": self.equipment_slots
+        }
+    
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any], position: Tuple[int, int] = (0, 0)) -> 'RPGChessPiece':
+        """Create a piece from a dictionary representation."""
+        piece = cls(
+            piece_type=data["piece_type"],
+            color=data["color"],
+            position=position,
+            rarity=data["rarity"],
+            level=data["level"],
+            special_abilities=data["special_abilities"],
+            equipment=data["equipment"]
+        )
+        piece.xp = data["xp"]
+        piece.xp_to_next_level = data["xp_to_next_level"]
+        piece.max_durability = data["max_durability"]
+        piece.current_durability = data["current_durability"]
+        piece.ability_slots = data["ability_slots"]
+        piece.equipment_slots = data["equipment_slots"]
+        return piece 

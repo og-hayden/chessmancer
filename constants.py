@@ -1,10 +1,15 @@
 import os
 import pygame
+import random
 from typing import Tuple
 
 # Enable GPU acceleration if available
 os.environ['PYGAME_HWSURFACE'] = '1'
 os.environ['PYGAME_DOUBLEBUF'] = '1'
+
+# Game modes
+MODE_CHESS = 0
+MODE_DUNGEON = 1
 
 # Board constants
 BOARD_SIZE = 8
@@ -13,6 +18,15 @@ BOARD_PX = BOARD_SIZE * SQUARE_SIZE
 WINDOW_WIDTH = BOARD_PX + 250  # Increased UI panel width
 WINDOW_HEIGHT = BOARD_PX
 FPS = 60
+
+# Dungeon constants
+TILE_SIZE = 40
+FLOOR_TILE = "floor"
+WALL_TILE = "wall"
+DOOR_TILE = "door"
+ENEMY_TILE = "enemy"
+CHEST_TILE = "chest"
+PLAYER_TILE = "player"
 
 # Animation constants
 ANIMATION_SPEED = 12  # Pixels per frame
@@ -101,4 +115,65 @@ def create_piece_images() -> dict:
             
             pieces[f'{color}_{piece_type}'] = final_image
     
-    return pieces 
+    return pieces
+
+def create_tile_images() -> dict:
+    """Create images for dungeon tiles."""
+    tiles = {}
+    
+    # Floor tile (light gray)
+    floor = pygame.Surface((TILE_SIZE, TILE_SIZE))
+    floor.fill((180, 180, 180))
+    # Add some texture
+    for i in range(5):
+        x = random.randint(0, TILE_SIZE - 3)
+        y = random.randint(0, TILE_SIZE - 3)
+        pygame.draw.rect(floor, (160, 160, 160), pygame.Rect(x, y, 3, 3))
+    tiles[FLOOR_TILE] = floor
+    
+    # Wall tile (dark gray with texture)
+    wall = pygame.Surface((TILE_SIZE, TILE_SIZE))
+    wall.fill((100, 100, 100))
+    # Add brick pattern
+    for y in range(0, TILE_SIZE, 10):
+        offset = 0 if y % 20 == 0 else 10
+        for x in range(offset, TILE_SIZE, 20):
+            brick = pygame.Rect(x, y, 18, 8)
+            pygame.draw.rect(wall, (120, 120, 120), brick)
+            pygame.draw.rect(wall, (80, 80, 80), brick, 1)
+    tiles[WALL_TILE] = wall
+    
+    # Door tile (brown)
+    door = pygame.Surface((TILE_SIZE, TILE_SIZE))
+    door.fill((150, 100, 50))
+    # Add door details
+    pygame.draw.rect(door, (120, 80, 40), pygame.Rect(5, 5, TILE_SIZE - 10, TILE_SIZE - 10))
+    pygame.draw.circle(door, (200, 200, 0), (TILE_SIZE - 10, TILE_SIZE // 2), 3)  # Doorknob
+    tiles[DOOR_TILE] = door
+    
+    # Enemy tile (red figure)
+    enemy = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+    enemy.fill((0, 0, 0, 0))  # Transparent
+    # Draw a simple enemy figure
+    pygame.draw.circle(enemy, (200, 50, 50), (TILE_SIZE // 2, TILE_SIZE // 3), TILE_SIZE // 4)  # Head
+    pygame.draw.rect(enemy, (200, 50, 50), pygame.Rect(TILE_SIZE // 3, TILE_SIZE // 2, TILE_SIZE // 3, TILE_SIZE // 3))  # Body
+    tiles[ENEMY_TILE] = enemy
+    
+    # Chest tile (gold chest)
+    chest = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+    chest.fill((0, 0, 0, 0))  # Transparent
+    # Draw a simple chest
+    pygame.draw.rect(chest, (150, 100, 50), pygame.Rect(5, TILE_SIZE // 2, TILE_SIZE - 10, TILE_SIZE // 3))  # Chest base
+    pygame.draw.rect(chest, (200, 150, 50), pygame.Rect(5, TILE_SIZE // 2 - 5, TILE_SIZE - 10, 10))  # Chest lid
+    pygame.draw.rect(chest, (200, 200, 0), pygame.Rect(TILE_SIZE // 2 - 3, TILE_SIZE // 2, 6, 5))  # Lock
+    tiles[CHEST_TILE] = chest
+    
+    # Player tile (blue figure)
+    player = pygame.Surface((TILE_SIZE, TILE_SIZE), pygame.SRCALPHA)
+    player.fill((0, 0, 0, 0))  # Transparent
+    # Draw a simple player figure
+    pygame.draw.circle(player, (50, 100, 200), (TILE_SIZE // 2, TILE_SIZE // 3), TILE_SIZE // 4)  # Head
+    pygame.draw.rect(player, (50, 100, 200), pygame.Rect(TILE_SIZE // 3, TILE_SIZE // 2, TILE_SIZE // 3, TILE_SIZE // 3))  # Body
+    tiles[PLAYER_TILE] = player
+    
+    return tiles 
