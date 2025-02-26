@@ -1,0 +1,1 @@
+"""Game model components for the chess game.""" 
