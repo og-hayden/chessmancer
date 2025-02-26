@@ -157,7 +157,7 @@ class DungeonUI:
         player_x, player_y = self.player.position
         distance = abs(tile_x - player_x) + abs(tile_y - player_y)
         
-        if distance > self.player.moves_remaining:
+        if distance > self.player.movement_range:
             return False
         
         # Check if the tile is walkable
@@ -337,8 +337,8 @@ class DungeonUI:
         health_text = font.render(f"Health: {self.player.health}/{self.player.max_health}", True, UI_TEXT)
         screen.blit(health_text, (10, 10))
         
-        # Draw movement points
-        moves_text = font.render(f"Moves: {self.player.moves_remaining}/{self.player.movement_range}", True, UI_TEXT)
+        # Draw movement range (for combat)
+        moves_text = font.render(f"Movement Range: {self.player.movement_range}", True, UI_TEXT)
         screen.blit(moves_text, (10, 35))
         
         # Draw player stats
